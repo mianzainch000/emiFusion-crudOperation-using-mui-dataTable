@@ -1,0 +1,240 @@
+import React, { useState, useEffect } from 'react'
+import 'bootstrap/dist/css/bootstrap.css'
+import MUIDataTable from 'mui-datatables'
+import Button from 'react-bootstrap/Button'
+import Form from 'react-bootstrap/Form'
+import Modal from 'react-bootstrap/Modal'
+import { useFormik } from 'formik'
+import * as Yup from 'yup'
+import axios from 'axios'
+
+export const StockData = () => {
+  const [show, setShow] = useState(false)
+  const handleClose = () => setShow(false)
+  const handleShow = () => setShow(true)
+  const [apiData, setapiData] = useState([])
+  const [id, setid] = useState('')
+  const [update, setUpdate] = useState('')
+  const options = {
+    search: true,
+    fixedHeader: false,
+    selectableRows: 'none',
+    selectableRowsOnClick: false,
+    displayRowCheckbox: false,
+    print: false,
+    download: false,
+    filter: false,
+    sort: false,
+  }
+
+  const columns = [
+    {
+      name: 'userId',
+      label: 'userId',
+    },
+
+    {
+      name: 'title',
+      label: 'Title',
+    },
+    {
+      name: 'body',
+      label: 'Body',
+    },
+    {
+      name: 'Delete',
+      label: 'Delete',
+
+      options: {
+        customBodyRenderLite: (dataIndex, rowIndex) => {
+          return (
+            <Button
+              variant="Dark"
+              className="bg-danger mt-3 mx-2"
+              onClick={() => deleteItem(apiData[dataIndex].id)}
+            >
+              Delete
+            </Button>
+          )
+        },
+      },
+    },
+    {
+      name: 'Edit',
+      label: 'Edit',
+      options: {
+        customBodyRenderLite: (dataIndex, rowIndex) => {
+          return (
+            <Button
+              variant="Dark"
+              className="bg-success mt-3 mx-2"
+              onClick={() => {
+                edit(
+                  apiData[dataIndex].id,
+                  apiData[dataIndex].userId,
+                  apiData[dataIndex].title,
+                  apiData[dataIndex].body,
+                  handleShow(),
+                )
+                handleShow()
+              }}
+            >
+              Edit
+            </Button>
+          )
+        },
+      },
+    },
+  ]
+  //Formik
+  const formik = useFormik({
+    initialValues: {
+      userId: '',
+      title: '',
+      body: '',
+    },
+    onSubmit: (values) => {
+      id ? updateData(id, values) : postData(values)
+      formik.handleReset()
+    },
+    validationSchema: Yup.object({
+      userId: Yup.string().required('Enter userId'),
+      title: Yup.string().required('Enter Title'),
+      body: Yup.string().min(1).max(2500).required('Enter body'),
+    }),
+  })
+
+  // let count = 0
+  // Get Data
+  useEffect(() => {
+    // console.log(count++)
+    axios.get('https://jsonplaceholder.typicode.com/posts').then((response) => {
+      // const filterData = response.data.filter((item) => item.apiData === 'userId')
+      setapiData(response.data)
+    })
+  }, [])
+
+  const deleteItem = (id) => {
+    axios.delete('https://jsonplaceholder.typicode.com/posts/' + id).then((response) => {
+      const delteData = apiData.filter((deleteId) => deleteId.id !== id)
+      setapiData(delteData)
+      // setUpdate(response)
+    })
+  }
+  const postData = (values) => {
+    axios
+      .post('https://jsonplaceholder.typicode.com/posts', {
+        userId: values.userId,
+        title: values.title,
+        body: values.body,
+        // id: parseInt(Math.random() * 10000, 10),
+      })
+      .then((response) => {
+        setapiData([...apiData, response.data])
+      })
+  }
+
+  const edit = (id, userId, title, body) => {
+    formik.setValues({ id, userId, title, body })
+    setid(id)
+  }
+  const updateData = (id, values) => {
+    console.log('val', values)
+    axios
+      .patch('https://jsonplaceholder.typicode.com/posts/' + id, {
+        userId: values?.userId,
+        title: values?.title,
+        body: values?.body,
+      })
+      .then((response) => {
+        const updatedData = apiData.map((state) =>
+          state.id === response.data.id ? response.data : state,
+        )
+        console.log(updatedData)
+        setapiData(updatedData)
+      })
+  }
+
+  return (
+    <>
+      <Button variant="primary" className="button" onClick={handleShow}>
+        Add
+      </Button>
+
+      <Modal show={show} onHide={handleClose}>
+        <Modal.Header closeButton>
+          <Modal.Title>Modal heading</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={formik.handleSubmit}>
+            <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
+              <Form.Label>User id</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="User Id"
+                autoFocus
+                name="userId"
+                autoComplete="off"
+                value={formik.values.userId}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+              />
+
+              {formik.touched.userId && formik.errors.userId ? (
+                <div className="error">{formik.errors.userId}</div>
+              ) : (
+                ''
+              )}
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
+              <Form.Label>Title</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Tilte"
+                autoFocus
+                autoComplete="off"
+                name="title"
+                value={formik.values.title}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+              />
+              {formik.touched.title && formik.errors.title ? (
+                <div className="error">{formik.errors.title}</div>
+              ) : (
+                ''
+              )}
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
+              <Form.Label>Description</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Description"
+                autoFocus
+                autoComplete="off"
+                name="body"
+                value={formik.values.body}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+              />
+              {formik.touched.body && formik.errors.body ? (
+                <div className="error">{formik.errors.body}</div>
+              ) : (
+                ''
+              )}
+            </Form.Group>
+            <Modal.Footer>
+              <Button variant="secondary" onClick={handleClose}>
+                Close
+              </Button>
+              <Button type="submit" variant="primary" onClick={handleClose}>
+                Save Changes
+              </Button>
+            </Modal.Footer>
+          </Form>
+        </Modal.Body>
+      </Modal>
+
+      <MUIDataTable title={'Employee List'} columns={columns} data={apiData} options={options} />
+    </>
+  )
+}
